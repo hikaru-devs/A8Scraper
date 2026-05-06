@@ -26,5 +26,8 @@ docs/
 # Cursor
 .cursor/
 
+# Claude Code ローカル設定
+.claude/settings.local.json
+
 # ローカル設定（ログイン情報）
 src/main/resources/a8-scraper.properties

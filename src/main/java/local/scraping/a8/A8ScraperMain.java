@@ -29,31 +29,31 @@ public class A8ScraperMain {
 	private static final String CONFIG_RESOURCE = "/a8-scraper.properties";
 
 	private static Properties loadProperties() throws IOException {
-		InputStream raw = A8ScraperMain.class.getResourceAsStream(CONFIG_RESOURCE);
-		if (raw == null) {
+		InputStream inputStream = A8ScraperMain.class.getResourceAsStream(CONFIG_RESOURCE);
+		if (inputStream == null) {
 			throw new IllegalStateException(
 					"a8-scraper.properties がクラスパスにありません。"
 							+ " a8.username / a8.password を設定してください。");
 		}
-		try (InputStreamReader reader = new InputStreamReader(raw, StandardCharsets.UTF_8)) {
-			Properties p = new Properties();
-			p.load(reader);
-			return p;
+		try (InputStreamReader reader = new InputStreamReader(inputStream, StandardCharsets.UTF_8)) {
+			Properties properties = new Properties();
+			properties.load(reader);
+			return properties;
 		}
 	}
 
-	private static String propRequired(Properties p, String key) {
-		String v = p.getProperty(key);
-		if (v == null || v.isBlank())
+	private static String propRequired(Properties properties, String key) {
+		String value = properties.getProperty(key);
+		if (value == null || value.isBlank())
 			throw new IllegalStateException(
 					"a8-scraper.properties に " + key + " が設定されていません（値が空です）。");
-		return v.strip();
+		return value.strip();
 	}
 
-	private static String resolveOutputDir(Properties p) {
-		String v = p.getProperty("a8.output.dir");
-		if (v != null && !v.isBlank())
-			return v.strip();
+	private static String resolveOutputDir(Properties properties) {
+		String value = properties.getProperty("a8.output.dir");
+		if (value != null && !value.isBlank())
+			return value.strip();
 		return Paths.get(System.getProperty("user.dir"), "output").toAbsolutePath().normalize().toString();
 	}
 
