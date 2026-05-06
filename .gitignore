@@ -20,6 +20,9 @@ release.properties
 *.xlsx
 output/
 
+# docs（運用メモ・テンプレをリポジトリに入れない運用の場合）
+docs/
+
 # Cursor
 .cursor/
 
