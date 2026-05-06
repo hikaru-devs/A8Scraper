@@ -22,3 +22,6 @@ output/
 
 # Cursor（チームで共有する場合はこの行を削除）
 .cursor/
+
+# ローカル設定（ログイン情報）
+src/main/resources/a8-scraper.properties

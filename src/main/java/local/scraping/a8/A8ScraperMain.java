@@ -1,11 +1,15 @@
 ﻿package local.scraping.a8;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
 import com.microsoft.playwright.Browser;
 import com.microsoft.playwright.BrowserContext;
@@ -17,20 +21,38 @@ import com.microsoft.playwright.Playwright;
  * A8.net スクレイパー エントリーポイント
  *
  * 実行前に確認すること:
- *   1. 環境変数 A8_USERNAME / A8_PASSWORD（A8.net のログイン情報）
- *   2. 任意: A8_OUTPUT_DIR（未設定時は実行ディレクトリ直下の output フォルダ）
+ *   1. {@code src/main/resources/a8-scraper.properties}（{@code a8-scraper.properties.example} をコピーして作成）
+ *   2. 任意キー {@code a8.output.dir}（未設定時は実行ディレクトリ直下の output フォルダ）
  */
 public class A8ScraperMain {
 
-	private static String getenvRequired(String name) {
-		String v = System.getenv(name);
+	private static final String CONFIG_RESOURCE = "/a8-scraper.properties";
+
+	private static Properties loadProperties() throws IOException {
+		InputStream raw = A8ScraperMain.class.getResourceAsStream(CONFIG_RESOURCE);
+		if (raw == null) {
+			throw new IllegalStateException(
+					"a8-scraper.properties がクラスパスにありません。"
+							+ " src/main/resources/a8-scraper.properties.example を"
+							+ " src/main/resources/a8-scraper.properties にコピーし、a8.username / a8.password を設定してください。");
+		}
+		try (InputStreamReader reader = new InputStreamReader(raw, StandardCharsets.UTF_8)) {
+			Properties p = new Properties();
+			p.load(reader);
+			return p;
+		}
+	}
+
+	private static String propRequired(Properties p, String key) {
+		String v = p.getProperty(key);
 		if (v == null || v.isBlank())
-			throw new IllegalStateException("環境変数 " + name + " を設定してください（Git にコミットしないため）。");
+			throw new IllegalStateException(
+					"a8-scraper.properties に " + key + " が設定されていません（値が空です）。");
 		return v.strip();
 	}
 
-	private static String outputDir() {
-		String v = System.getenv("A8_OUTPUT_DIR");
+	private static String resolveOutputDir(Properties p) {
+		String v = p.getProperty("a8.output.dir");
 		if (v != null && !v.isBlank())
 			return v.strip();
 		return Paths.get(System.getProperty("user.dir"), "output").toAbsolutePath().normalize().toString();
@@ -45,9 +67,10 @@ public class A8ScraperMain {
 
 	public static void main(String[] args) throws InterruptedException, IOException {
 
-		String username = getenvRequired("A8_USERNAME");
-		String password = getenvRequired("A8_PASSWORD");
-		String outputDir = outputDir();
+		Properties config = loadProperties();
+		String username = propRequired(config, "a8.username");
+		String password = propRequired(config, "a8.password");
+		String outputDir = resolveOutputDir(config);
 
 		System.out.println("===== A8.net スクレイパー開始 =====");
 		String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmm"));
