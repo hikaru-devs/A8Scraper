@@ -21,7 +21,7 @@ import com.microsoft.playwright.Playwright;
  * A8.net スクレイパー エントリーポイント
  *
  * 実行前に確認すること:
- *   1. {@code src/main/resources/a8-scraper.properties}（{@code a8-scraper.properties.example} をコピーして作成）
+ *   1. {@code src/main/resources/a8-scraper.properties}
  *   2. 任意キー {@code a8.output.dir}（未設定時は実行ディレクトリ直下の output フォルダ）
  */
 public class A8ScraperMain {
@@ -33,8 +33,7 @@ public class A8ScraperMain {
 		if (raw == null) {
 			throw new IllegalStateException(
 					"a8-scraper.properties がクラスパスにありません。"
-							+ " src/main/resources/a8-scraper.properties.example を"
-							+ " src/main/resources/a8-scraper.properties にコピーし、a8.username / a8.password を設定してください。");
+							+ " a8.username / a8.password を設定してください。");
 		}
 		try (InputStreamReader reader = new InputStreamReader(raw, StandardCharsets.UTF_8)) {
 			Properties p = new Properties();

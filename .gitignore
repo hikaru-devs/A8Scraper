@@ -20,7 +20,7 @@ release.properties
 *.xlsx
 output/
 
-# Cursor（チームで共有する場合はこの行を削除）
+# Cursor
 .cursor/
 
 # ローカル設定（ログイン情報）
