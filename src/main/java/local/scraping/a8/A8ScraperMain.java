@@ -64,6 +64,12 @@ public class A8ScraperMain {
 	private static final boolean TRIAL_MODE = false;
 	private static final int TRIAL_MAX = 3;
 
+	/** カテゴリ単位のリトライ上限 */
+	private static final int CATEGORY_RETRY_MAX = 2;
+
+	/** カテゴリリトライ前の待機時間（ms） */
+	private static final long CATEGORY_RETRY_WAIT_MS = 10_000;
+
 	public static void main(String[] args) throws InterruptedException, IOException {
 
 		Properties config = loadProperties();
@@ -97,19 +103,30 @@ public class A8ScraperMain {
 				if (TRIAL_MODE)
 					System.out.println("  ※ TRIAL_MODE: 最初の1カテゴリのみ実行します");
 
-				try {
-					int limit = TRIAL_MODE ? TRIAL_MAX : Integer.MAX_VALUE;
-					List<ProgramInfo> categoryPrograms = A8Scraper.scrapeCategoryByName(page, categoryName, limit);
+				boolean success = false;
+				for (int attempt = 1; attempt <= CATEGORY_RETRY_MAX && !success; attempt++) {
+					if (attempt > 1) {
+						System.err.printf("  [カテゴリリトライ %d/%d] %s%n",
+								attempt - 1, CATEGORY_RETRY_MAX - 1, categoryName);
+						Thread.sleep(CATEGORY_RETRY_WAIT_MS);
+					}
+					try {
+						int limit = TRIAL_MODE ? TRIAL_MAX : Integer.MAX_VALUE;
+						List<ProgramInfo> categoryPrograms = A8Scraper.scrapeCategoryByName(page, categoryName, limit);
 
-					allPrograms.addAll(categoryPrograms);
+						allPrograms.addAll(categoryPrograms);
 
-					// カテゴリ単位で中間保存（途中で止まっても損失最小化）
-					String categoryFile = Paths.get(outputDir, "A8_" + categoryName + "_" + timestamp + ".xlsx").toString();
-					ExcelWriter.write(categoryPrograms, categoryFile);
-					System.out.printf("  保存完了: %s (%d件)%n", categoryFile, categoryPrograms.size());
+						// カテゴリ単位で中間保存（途中で止まっても損失最小化）
+						String categoryFile = Paths.get(outputDir, "A8_" + categoryName + "_" + timestamp + ".xlsx").toString();
+						ExcelWriter.write(categoryPrograms, categoryFile);
+						System.out.printf("  保存完了: %s (%d件)%n", categoryFile, categoryPrograms.size());
+						success = true;
 
-				} catch (Exception e) {
-					System.err.println("  カテゴリ処理エラー [" + categoryName + "]: " + e.getMessage());
+					} catch (Exception e) {
+						if (attempt == CATEGORY_RETRY_MAX) {
+							System.err.println("  カテゴリ処理エラー [" + categoryName + "]: " + e.getMessage());
+						}
+					}
 				}
 
 				if (TRIAL_MODE)

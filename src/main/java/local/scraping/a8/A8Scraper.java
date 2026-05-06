@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
+import com.microsoft.playwright.PlaywrightException;
 import com.microsoft.playwright.options.LoadState;
 
 /**
@@ -32,6 +33,12 @@ public class A8Scraper {
 
 	/** リクエスト間隔（ms） */
 	static final int REQUEST_DELAY_MS = 1500;
+
+	/** タイムアウト時のリトライ上限 */
+	private static final int RETRY_MAX = 3;
+
+	/** リトライ待機時間（ms）。attempt 回目は RETRY_WAIT_MS * attempt 待機する */
+	private static final long RETRY_WAIT_MS = 5_000;
 
 	/** 対象カテゴリ（17カテゴリ） */
 	static final List<String> TARGET_CATEGORIES = Arrays.asList(
@@ -145,7 +152,25 @@ public class A8Scraper {
 
 			if (all.size() >= maxItems)
 				break;
-			if (!goToNextPage(page))
+
+			boolean hasNext = false;
+			PlaywrightException lastException = null;
+			for (int attempt = 1; attempt <= RETRY_MAX; attempt++) {
+				try {
+					hasNext = goToNextPage(page);
+					lastException = null;
+					break;
+				} catch (PlaywrightException e) {
+					lastException = e;
+					if (attempt < RETRY_MAX) {
+						System.err.printf("  [次ページリトライ %d/%d] ページ%d%n", attempt, RETRY_MAX - 1, pageNum);
+						Thread.sleep(RETRY_WAIT_MS * attempt);
+					}
+				}
+			}
+			if (lastException != null)
+				throw lastException;
+			if (!hasNext)
 				break;
 			pageNum++;
 			Thread.sleep(REQUEST_DELAY_MS);
@@ -197,20 +222,33 @@ public class A8Scraper {
 
 	public static ProgramInfo scrapeDetailPage(Page page, String url, String categoryName)
 			throws InterruptedException {
-		page.navigate(url);
-		page.waitForLoadState(LoadState.LOAD);
-		Thread.sleep(500);
+		PlaywrightException lastException = null;
+		for (int attempt = 1; attempt <= RETRY_MAX; attempt++) {
+			try {
+				page.navigate(url);
+				page.waitForLoadState(LoadState.LOAD);
+				Thread.sleep(500);
 
-		String category = categoryName.isBlank() ? getCategoryFromPage(page) : categoryName;
-		String advertiserName = getText(page, ".company");
-		String programTitle = getText(page, ".pgName");
-		String siteUrl = getHref(page, ".allianceBtnBox a.subBtn:first-child");
-		String reward = getText(page, ".amountBox dl.base:first-child dd .bold");
-		String epc = getTextByIndex(page, ".amountBox dl.base.other dd", 0);
-		String confirmRate = getTextByIndex(page, ".amountBox dl.base.other dd", 1);
+				String category = categoryName.isBlank() ? getCategoryFromPage(page) : categoryName;
+				String advertiserName = getText(page, ".company");
+				String programTitle = getText(page, ".pgName");
+				String siteUrl = getHref(page, ".allianceBtnBox a.subBtn:first-child");
+				String reward = getText(page, ".amountBox dl.base:first-child dd .bold");
+				String epc = getTextByIndex(page, ".amountBox dl.base.other dd", 0);
+				String confirmRate = getTextByIndex(page, ".amountBox dl.base.other dd", 1);
 
-		return new ProgramInfo(category, advertiserName, programTitle,
-				siteUrl, reward, epc, confirmRate);
+				return new ProgramInfo(category, advertiserName, programTitle,
+						siteUrl, reward, epc, confirmRate);
+			} catch (PlaywrightException e) {
+				lastException = e;
+				if (attempt < RETRY_MAX) {
+					System.err.printf("    [リトライ %d/%d] %s%n", attempt, RETRY_MAX - 1,
+							e.getMessage().split("\n")[0]);
+					Thread.sleep(RETRY_WAIT_MS * attempt);
+				}
+			}
+		}
+		throw lastException;
 	}
 
 	/** .status 内の "カテゴリ" dl の dd テキストを返す */
