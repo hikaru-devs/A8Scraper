@@ -62,25 +62,6 @@ public class A8Scraper {
 	}
 
 	// ---------------------------------------------------------------
-	// 全カテゴリをスクレイピング
-	// ---------------------------------------------------------------
-
-	public static List<ProgramInfo> scrapeAllCategories(Page page) throws InterruptedException {
-		List<ProgramInfo> all = new ArrayList<>();
-		for (String categoryName : TARGET_CATEGORIES) {
-			System.out.printf("%n=== [%s] 処理開始 ===%n", categoryName);
-			try {
-				List<ProgramInfo> programs = scrapeCategoryByName(page, categoryName);
-				all.addAll(programs);
-				System.out.printf("  [%s] 完了: %d件%n", categoryName, programs.size());
-			} catch (Exception e) {
-				System.err.println("  エラー [" + categoryName + "]: " + e.getMessage());
-			}
-		}
-		return all;
-	}
-
-	// ---------------------------------------------------------------
 	// 1カテゴリをスクレイピング（公開メソッド）
 	// ---------------------------------------------------------------
 
